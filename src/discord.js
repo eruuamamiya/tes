@@ -1,13 +1,17 @@
+// baris 1
 import {DiscordSDK, patchUrlMappings} from '@discord/embedded-app-sdk';
+// ganti `const sdk = new DiscordSDK(...)` di dalam if (inDiscord) jadi:
+sdk = new DiscordSDK(import.meta.env.VITE_DISCORD_CLIENT_ID);
 
 /* Harus sama persis dengan URL Mappings di Developer Portal (maks. 10).
    target = host saja, tanpa https://  */
 const MAPPINGS = [
   {prefix: '/api', target: 'api.nekostream.online'},
-  {prefix: '/img', target: 'r2.nyomo.my.id'},  // poster
+  {prefix: '/img', target: 'r2.nyomo.my.id/images'},  // poster
   // host gambar lain? tambahkan di sini, mis. {prefix: '/img2', target: 'host.lain.com'},
 ];
 
+export let sdk = null;
 export const inDiscord = new URLSearchParams(location.search).has('frame_id');
 
 if (inDiscord) {
