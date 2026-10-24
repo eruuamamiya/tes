@@ -1,3 +1,7 @@
+import {sdk, inDiscord} from './discord.js';
+import {Common} from '@discord/embedded-app-sdk';
+let fsOff=null;
+
 const API='https://api.nekostream.online/otakudesu';
 const $=s=>document.querySelector(s), app=$('#app');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -215,14 +219,30 @@ async function episode(id){
   const eps=findEps(d.info??d), seenSet=new Set(ls.get('seen',[]));
   app.innerHTML=`<h1 style="font-size:1.35rem;margin-bottom:14px">${esc(title)}</h1>
   <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;padding:11px 14px;border-radius:12px;background:var(--card);border:1px solid #e0a43a;font-size:.84rem;line-height:1.55"><span style="font-size:1.1rem">⚠️</span><div><b>Pemberitahuan:</b> Iklan yang muncul di dalam video berasal dari server pihak ketiga, <b>bukan dari kami</b>, dan kami tidak mendapat keuntungan darinya. <b>Judi online dilarang</b> dan melanggar hukum, jangan tergiur iklan judi, slot, atau pinjol.<br>💡 <b>Saran:</b> gunakan browser <b>Brave</b> dan pasang ekstensi <b>ad blocker</b>.</div></div>
+  <button id="fsx" class="btn g" style="display:none;position:fixed;top:12px;right:12px;z-index:10000">✕ Keluar</button>
   <div class="player" id="pl">${useDef?frame(def):(qs.length?'<div class="ld"><div class="sp2"></div>Memuat server…</div>':'<div class="err">Video belum tersedia untuk episode ini.</div>')}</div>
-  <div class="srv" style="margin:8px 0 0"><b style="min-width:0">Video error?</b><button id="nx">⏭ Coba server lain</button><a class="chip" id="op" target="_blank" rel="noopener noreferrer" ${def?`href="${esc(def)}"`:'style="display:none"'}>Buka di tab baru ↗</a></div>
+  <div class="srv" style="margin:8px 0 0"><b style="min-width:0">Video error?</b><button id="nx">⏭ Coba server lain</button><button id="fs">⛶ Layar penuh</button><a class="chip" id="op" target="_blank" rel="noopener noreferrer" ${def?`href="${esc(def)}"`:'style="display:none"'}>Buka di tab baru ↗</a></div>
   <div style="display:flex;gap:10px;margin:14px 0;flex-wrap:wrap">${prev?`<a class="btn g" href="#/episode/${encodeURIComponent(prev)}">← Sebelumnya</a>`:''}${animeId?`<a class="btn g" href="#/anime/${encodeURIComponent(animeId)}">☰ Semua Episode</a>`:''}${next?`<a class="btn" style="margin:0" href="#/episode/${encodeURIComponent(next)}">Berikutnya →</a>`:''}</div>
   ${qs.length||useDef?`<h2 class="t" style="margin-top:6px">Pilih Server</h2>`:''}${useDef?`<div class="srv"><b>Utama</b><button id="dfl" class="on">Default</button></div>`:''}
   ${qs.length?qs.map(q=>`<div class="srv"><b>${esc(q.title)}</b>${q.list.map(v=>`<button data-s="${esc(v.serverId)}">${esc(v.title)}</button>`).join('')}</div>`).join(''):''}
   ${dls.length?`<h2 class="t">Unduh</h2>`+dls.map(q=>`<div class="srv"><b>${esc(q.title||'')}${q.size?' · '+esc(q.size):''}</b>${(q.urls||[]).map(u=>`<a class="chip" target="_blank" rel="noopener noreferrer" href="${esc(u.url)}">${esc(u.title)}</a>`).join('')}</div>`).join(''):''}
   ${eps.length?`<h2 class="t">Daftar Episode</h2><div class="eps">${eps.map(e=>`<a class="ep ${seenSet.has(e.episodeId)&&e.episodeId!==id?'seen':''}" ${e.episodeId===id?'style="border-color:var(--a);color:var(--a)"':''} href="#/episode/${encodeURIComponent(e.episodeId)}"><span>${esc(e.title)}</span><small>${e.episodeId===id?'▶ diputar':esc(e.date||'')}</small></a>`).join('')}</div>`:''}`;
   const pl=$('#pl'); adNotice();
+
+  /* ---- layar penuh + landscape ---- */
+  const setFull=async on=>{
+    pl.classList.toggle('full',on);
+    document.body.style.overflow=on?'hidden':'';
+    const x=$('#fsx'); if(x)x.style.display=on?'':'none';
+    if(inDiscord&&sdk){
+      try{ await sdk.commands.setOrientationLockState({lock_state:on?Common.OrientationLockStateTypeObject.LANDSCAPE:Common.OrientationLockStateTypeObject.UNLOCKED}) }catch{}
+    }
+  };
+  $('#fs').onclick=()=>setFull(true);
+  $('#fsx').onclick=()=>setFull(false);
+  fsOff=()=>{ pl.classList.remove('full'); document.body.style.overflow='';
+    if(inDiscord&&sdk){ try{ sdk.commands.setOrientationLockState({lock_state:Common.OrientationLockStateTypeObject.UNLOCKED}).catch(()=>{}) }catch{} } };
+
   let idx=-1; const setOpen=u=>{const a=$('#op');a.href=u;a.style.display=''};
   const pick=async b=>{
     app.querySelectorAll('.srv button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); idx=btns.indexOf(b);
@@ -248,6 +268,7 @@ async function route(){
   const [a,b,c]=p; document.title='NekoStream — Nonton Anime Sub Indo'; scrollTo(0,0);
   document.querySelectorAll('#nav a').forEach(x=>x.classList.toggle('on',x.dataset.k===(a||'home')||(a=='genres'&&x.dataset.k=='genre')));
   loading();
+  if(fsOff){fsOff();fsOff=null}
   try{
     if(!a)await home();
     else if(a=='ongoing'||a=='completed')await listPage(a,+b||1);
