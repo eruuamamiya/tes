@@ -7,7 +7,7 @@ sdk = new DiscordSDK(import.meta.env.VITE_DISCORD_CLIENT_ID);
    target = host saja, tanpa https://  */
 const MAPPINGS = [
   {prefix: '/api', target: 'api.nekostream.online'},
-  {prefix: '/img', target: 'r2.nyomo.my.id/images'},  // poster
+  {prefix: '/img', target: 'r2.nyomo.my.id'},  // poster
   // host gambar lain? tambahkan di sini, mis. {prefix: '/img2', target: 'host.lain.com'},
 ];
 
